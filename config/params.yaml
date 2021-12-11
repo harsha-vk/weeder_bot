@@ -1,0 +1,42 @@
+video_source:
+    ros__parameters:
+        resource: "csi://0"
+        width: 1640 # horizontal fov / pixel = 62.2 / 1640
+        height: 1232 # vertical fov / pixel = 48.8 / 1232
+        frame_rate: 30
+        flip: "FLIP_ROTATE_180"
+        camera_info:
+            distortion_model: "plumb_bob"
+            d: [0.170160, -0.291606, -0.001264, -0.001159, 0.000000]
+            k: [1307.951660, 0.000000, 818.790341, 0.000000, 1302.529788, 621.074060, 0.000000, 0.000000, 1.000000]
+            r: [1.000000, 0.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000, 0.000000, 1.000000]
+            p: [1337.714355, 0.000000, 816.971913, 0.000000, 0.000000, 1335.737305, 619.883443, 0.000000, 0.000000, 0.000000, 1.000000, 0.000000]
+            binning_x: 1
+            binning_y: 1
+crop_decimate_node:
+    ros__parameters:
+        offset_x: 20
+        offset_y: 16
+        width: 1600
+        height: 1200
+extract_images:
+    ros__parameters:
+        filename_format: "./src/weed_locator/assets/image_data/frame%04i.jpg"
+        sec_per_frame: 10.0
+detectnet:
+    ros__parameters:
+        model_name: "ssd-mobilenet-v2"
+        model_path: ""
+        prototxt_path: ""
+        class_labels_path: ""
+        input_blob: ""
+        output_cvg: ""
+        output_bbox: ""
+        overlay_flags: "box,labels,conf"
+        mean_pixel_value: 0.0
+        threshold: 0.5
+ublox_gps_node:
+    ros__parameters:
+        device: ""
+        dynamic_model: "pedestrain"
+
