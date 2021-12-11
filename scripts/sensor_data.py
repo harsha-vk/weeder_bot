@@ -2,7 +2,6 @@
 
 import rclpy
 from rclpy.node import Node
-from nav_msgs.msg import Odometry
 
 import serial
 import threading
@@ -19,27 +18,19 @@ class SensorData(Node):
                                             ('timeout',1),
                                             ('queue',10),
                                             ('wheel_pub_id',None),
-                                            ('wheel_msg_len',None),
-                                            ('wheel_base_len',None)])
+                                            ('wheel_msg_len',None)])
         self.nodeParams()
         # Initialize serial port
         self.serialInit()
         # Create publishers
         queue = self.get_parameter('queue').get_parameter_value().integer_value
-        self.odom_pub = self.create_publisher(Odometry,'sensors/wheel_odometry',length)
+        self.wheel_pub = self.create_publisher(None,'sensors/wheel_speed',queue)
         # Create subscribers
-        #TODO:
+        #TODO
 
     def nodeParams(self):
         self.wheel_pub_id = self.get_parameter('wheel_pub_id').get_parameter_value().integer_value
         self.wheel_msg_len = self.get_parameter('wheel_msg_len').get_parameter_value().integer_value
-        """
-        self.wheel_base = self.get_parameter('wheel_base_len').get_parameter_value().double_value
-        self.pre_stamp = 0
-        self.x_pos = 0.0
-        self.y_pos = 0.0
-        self.theta = 0.0000000001
-        """
 
     def serialInit(self):
         baudrate =self.get_parameter('baudrate').get_parameter_value().integer_value
@@ -145,32 +136,11 @@ class SensorData(Node):
             raise IOError('Serial Port read failure: %s' % e)
     
     def publisherCallback(self,topic_id,msg_length,msg):
-        #https://answers.ros.org/question/241602/get-odometry-from-wheels-encoders/
         if topic_id == self.wheel_pub_id and msg_length == self.wheel_msg_len:
             seconds = struct.unpack('<I',msg_[0:4])
             nanoseconds = struct.unpack('<I',msg_[4:8])
             v_left = struct.unpack('<f',msg_[8:12])
             v_right = struct.unpack('<f',msg_[12:16])
-            """
-            vx = (v_right + v_left) / 2
-            vth = (v_right - v_left) / self.wheel_base_len
-            dt = (seconds + (nanoseconds * 1e-9)) - self.pre_stamp
-            self.pre_stamp = seconds + (nanoseconds * 1e-9)
-            delta_x = (vx * math.cos(self.theta)) * dt
-            delta_y = (vx * math.sin(self.theta)) * dt
-            delta_th = vth * dt
-            self.x_pos += delta_x
-            self.y_pos += delta_y
-            self.theta += delta_th
-            odom_msg = Odometry()
-            odom_msg.header.stamp = self.get_clock().now().to_msg()
-            odom_msg.pose.pose.position.x = x
-            odom_msg.pose.pose.position.y = y
-            odom_msg.pose.pose.position.z = 0.0
-            odom_msg.twist.twist.linear.x = vx
-            odom_msg.twist.twist.linear.y = 0.0
-            odom_msg.twist.twist.angular.z = vth
-            """
 
 
 def main(args=None):
