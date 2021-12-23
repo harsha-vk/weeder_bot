@@ -16,6 +16,15 @@ find_package(ament_cmake_python REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclpy REQUIRED)
 
+# Install Python modules
+ament_python_install_package(${PROJECT_NAME})
+
+# Install Python executables
+install(PROGRAMS
+  scripts/sensor_data.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 # Install launch files.
 install(DIRECTORY
   launch

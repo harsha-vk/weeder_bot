@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 
+import math
+import os
 import rclpy
-from rclpy.node import Node
-
 import serial
+import smbus
+import sys
 import threading
 import time
-import math
+
+from imusensor.MPU9250 import MPU9250
+from geometry_msgs.msg import Vector3Stamped
+from rclpy.node import Node
 
 
 class SensorData(Node):
@@ -18,22 +23,27 @@ class SensorData(Node):
                                             ('timeout',1),
                                             ('queue',10),
                                             ('wheel_pub_id',None),
-                                            ('wheel_msg_len',None)])
-        self.nodeParams()
+                                            ('wheel_pub_len',None),
+                                            ('wheel_sub_id',None),
+                                            ('wheel_sub_len',None),
+                                            ('imu_address',None)])
+        self.serialParams()
         # Initialize serial port
         self.serialInit()
         # Create publishers
         queue = self.get_parameter('queue').get_parameter_value().integer_value
-        self.wheel_pub = self.create_publisher(None,'sensors/wheel_speed',queue)
+        self.wheel_pub = self.create_publisher(Vector3Stamped,'sensors/wheel_speed',queue)
         # Create subscribers
-        #TODO
+        self.wheel_sub = self.create_subscription(Vector3Stamped,'actuator/wheel_speed',self.wheelSubCallback,queue)
 
-    def nodeParams(self):
+    def serialParams(self):
         self.wheel_pub_id = self.get_parameter('wheel_pub_id').get_parameter_value().integer_value
-        self.wheel_msg_len = self.get_parameter('wheel_msg_len').get_parameter_value().integer_value
+        self.wheel_pub_len = self.get_parameter('wheel_pub_len').get_parameter_value().integer_value
+        self.wheel_sub_id = self.get_parameter('wheel_pub_id').get_parameter_value().integer_value
+        self.wheel_sub_len = self.get_parameter('wheel_sub_len').get_parameter_value().integer_value
 
     def serialInit(self):
-        baudrate =self.get_parameter('baudrate').get_parameter_value().integer_value
+        baudrate = self.get_parameter('baudrate').get_parameter_value().integer_value
         port = self.get_parameter('port').get_parameter_value().string_value
         self.header = b'\xff'
         self.protocol_ver = b'\xfe'
@@ -59,9 +69,9 @@ class SensorData(Node):
             with self.write_lock:
                 self.port.write(data)
         except serial.SerialTimeoutException as e:
-            rclpy.get_logger().error('Write timeout: %s' % e)
+            self.get_logger().error('Write timeout: %s' % e)
 
-    def processRead(self):
+    def serialRead(self):
         read_step = None
         if (self.get_clock().now().nanoseconds - self.lastsync) > (self.timeout * 3 * 1e9):
             if self.synced:
@@ -105,7 +115,7 @@ class SensorData(Node):
             checksum = sum(array.array('B', topic_id_header + msg + chk))
             if checksum % 256 == 255:
                 self.synced = True
-                self.publisherCallback(topic_id,msg_length,msg)
+                self.serialCallback(topic_id,msg_length,msg)
             else:
                 self.get_logger().info('wrong checksum for topic id and msg')
         except IOError as e:
@@ -135,12 +145,37 @@ class SensorData(Node):
         except Exception as e:
             raise IOError('Serial Port read failure: %s' % e)
     
-    def publisherCallback(self,topic_id,msg_length,msg):
+    def serialCallback(self,topic_id,msg_length,msg):
         if topic_id == self.wheel_pub_id and msg_length == self.wheel_msg_len:
             seconds = struct.unpack('<I',msg_[0:4])
             nanoseconds = struct.unpack('<I',msg_[4:8])
             v_left = struct.unpack('<f',msg_[8:12])
             v_right = struct.unpack('<f',msg_[12:16])
+            wheel_msg = Vector3Stamped()
+            wheel_msg.header.stamp.sec = seconds
+            wheel_msg.header.stamp.nanosec = nanoseconds
+            wheel_msg.vector.x = v_left
+            wheel_msg.vector.y = v_right
+            self.wheel_pub.publish(wheel_msg)
+
+    def wheelSubCallback(self,msg):
+        v_left = struct.pack('<f',msg.vector.x)
+        v_right = struct.pack('<f',msg.vector.y)
+        try: #TODO
+            with self.write_lock:
+                self.port.write(data)
+        except serial.SerialTimeoutException as e:
+            self.get_logger().error('Write timeout: %s' % e)
+
+    def imuInit(self):
+        address = None
+        bus = smbus.SMBus(1)
+        self.imu = MPU9250.MPU9250(bus,address)
+        self.imu.begin()
+
+    def imuRead(self):
+        if (self.get_clock().now().nanoseconds - self.lastsync) > (self.timeout * 3 * 1e9): #TODO
+            self.imu.readSensor()
 
 
 def main(args=None):
@@ -149,7 +184,8 @@ def main(args=None):
     sensor_data.requestTopics()
     sensor_data.lastsync = sensor_data.get_clock().now().nanoseconds
     while rclpy.ok():
-        sensor_data.processRead()
+        sensor_data.serialRead()
+        sensor_data.imuRead()
         rclpy.spin_once(sensor_data,timeout_sec=0.1)
     rect_node.destroy_node()
     rclpy.shutdown()
