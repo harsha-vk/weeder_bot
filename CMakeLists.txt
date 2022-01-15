@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(weed_locator)
+project(weeder_bot)
 
 # Default to C++14
 if(NOT CMAKE_CXX_STANDARD)
@@ -21,7 +21,7 @@ ament_python_install_package(${PROJECT_NAME})
 
 # Install Python executables
 install(PROGRAMS
-  scripts/sensor_data.py
+  scripts/imu_data.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
