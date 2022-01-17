@@ -17,8 +17,8 @@
 #define PWM_TOP 1023
 
 #define PICO_I2C i2c0
-#define PICO_I2C_ADDR 0x75
-#define PICO_I2C_BAUDRATE (400 * 1000)
+#define PICO_I2C_ADDR 0x55
+#define PICO_I2C_BAUDRATE (100 * 1000)
 
 #define LEFT_KD 0
 #define LEFT_KI 0

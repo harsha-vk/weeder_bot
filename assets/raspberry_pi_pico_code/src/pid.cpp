@@ -1,11 +1,8 @@
-/**********************************************************************************************
- * Originally:
- * Arduino PID Library - Version 1.2.1
- * by Brett Beauregard <br3ttb@gmail.com> brettbeauregard.com
- * This Library is licensed under the MIT License
- **********************************************************************************************/
+/*
+ * Originally: https://github.com/br3ttb/Arduino-PID-Library.git
+ */
+ 
 #include <pid.h>
-#include "pico/stdlib.h"
 
 PID::PID(double* Input, double* Output, double* Setpoint, double Kp, double Ki, double Kd, int POn, int ControllerDirection)
 {

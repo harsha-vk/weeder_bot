@@ -1,3 +1,12 @@
+/*
+ * Originally: https://github.com/br3ttb/Arduino-PID-Library.git
+ */
+
+#ifndef _PID_H_
+#define _PID_H_
+
+#include "pico/stdlib.h"
+
 #define AUTOMATIC	1
 #define MANUAL	0
 #define DIRECT  0
@@ -41,4 +50,6 @@ class PID
         uint32_t SampleTime;
         double outMin, outMax;
         bool inAuto, pOnE;
-}
+};
+
+#endif

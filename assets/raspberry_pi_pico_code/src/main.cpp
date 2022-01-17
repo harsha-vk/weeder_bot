@@ -1,12 +1,11 @@
 #include <main.h>
 #include <pid.h>
+#include <Wire.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "hardware/gpio.h"
-#include "hardware/i2c.h"
 #include "hardware/pwm.h"
 #include "pico/stdlib.h"
-#include "pico/time.h"
 
 uint slice_num_1;
 uint channel_1;
@@ -20,9 +19,9 @@ int prev_right_tick_cnt = 0;
 
 uint32_t prev_time = 0;
 double left_vel = 0, left_pul = 0, left_set = 0;
-PID left_pid (&left_vel, &left_pul, &left_set, LEFT_KP, LEFT_KI, LEFT_KD, DIRECT);
+PID left_pid(&left_vel, &left_pul, &left_set, LEFT_KP, LEFT_KI, LEFT_KD, DIRECT);
 double right_vel = 0, right_pul = 0, right_set = 0;
-PID right_pid (&right_vel, &right_pul, &right_set, RIGHT_KP, RIGHT_KI, RIGHT_KD, DIRECT);
+PID right_pid(&right_vel, &right_pul, &right_set, RIGHT_KP, RIGHT_KI, RIGHT_KD, DIRECT);
 
 void gpio_callback(uint gpio, uint32_t events)
 {
@@ -66,6 +65,21 @@ void pwm_out(int l_pul,int r_pul)
     }
 }
 
+static void slave_on_receive(int count) // TODO
+{
+    while(Wire.available())
+    {
+        uint8_t data = (uint8_t)Wire.read();
+    }
+}
+
+static void slave_on_request() // TODO
+{
+    size_t size;
+    uint8_t value;
+    Wire.write(&value,size);
+}
+
 int main()
 {
     //stdio_init_all();
@@ -107,8 +121,12 @@ int main()
 
     gpio_set_function(PICO_I2C_SDA, GPIO_FUNC_I2C);
     gpio_set_function(PICO_I2C_SCL, GPIO_FUNC_I2C);
+    gpio_pull_up(PICO_I2C_SDA);
+    gpio_pull_up(PICO_I2C_SCL);
     i2c_init(PICO_I2C, PICO_I2C_BAUDRATE);
-    i2c_set_slave_mode(PICO_I2C, true, PICO_I2C_ADDR);
+    Wire.onReceive(slave_on_receive);
+    Wire.onRequest(slave_on_request);
+    Wire.begin(PICO_I2C_ADDR);
 
     left_pid.SetMode(AUTOMATIC);
     left_pid.SetSampleTime(SAMPLE_TIME_US);
@@ -129,8 +147,8 @@ int main()
             prev_right_tick_cnt = right_tick_cnt;
             prev_time = time_us_32();
         }
-        left_pid.compute();
-        right_pid.compute();
+        left_pid.Compute();
+        right_pid.Compute();
         pwm_out((int)left_pul,(int)right_pul);
         sleep_ms(10);
     }

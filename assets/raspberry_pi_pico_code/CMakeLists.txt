@@ -13,13 +13,18 @@ include_directories(
 )
 
 add_executable(${PROJECT_NAME} 
+    src/i2c_slave.cpp
     src/main.cpp
+    src/pid.cpp
+    src/Wire.cpp
 )
 
 pico_add_extra_outputs(${PROJECT_NAME})
 
 target_link_libraries(${PROJECT_NAME} 
     pico_stdlib
+    hardware_i2c
+    hardware_pwm
 )
 
 pico_enable_stdio_usb(${PROJECT_NAME} 1)
