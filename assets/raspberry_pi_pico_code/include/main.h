@@ -20,19 +20,19 @@
 #define PICO_I2C_ADDR 0x55
 #define PICO_I2C_BAUDRATE (100 * 1000)
 
-#define LEFT_KD 0
-#define LEFT_KI 0
-#define LEFT_KP 1
+#define LEFT_KD 0.125
+#define LEFT_KI 0.5
+#define LEFT_KP 316.0
 
-#define RIGHT_KD 0
-#define RIGHT_KI 0
-#define RIGHT_KP 1
+#define RIGHT_KD 0.125
+#define RIGHT_KI 0.5
+#define RIGHT_KP 316.0
 
-#define SAMPLE_TIME_US 20'000
+#define SAMPLE_TIME_US 2000
 
 #define PULSE_PER_ROTATION 134.4
-#define PERIOD_IN_S 0.1
-#define PERIOD_IN_US (PERIOD_IN_S * 1'000'000)
+#define PERIOD_IN_S 0.4
+#define PERIOD_IN_US (PERIOD_IN_S * 1000000)
 #define WHEEL_DIAMETER 0.1
 
 #define LEN_PER_PULSE ((M_PI * WHEEL_DIAMETER) / PULSE_PER_ROTATION)

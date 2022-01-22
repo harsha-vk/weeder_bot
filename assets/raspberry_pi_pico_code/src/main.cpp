@@ -6,6 +6,7 @@
 #include "hardware/gpio.h"
 #include "hardware/pwm.h"
 #include "pico/stdlib.h"
+#include "pico/time.h"
 
 uint slice_num_1;
 uint channel_1;
@@ -22,6 +23,8 @@ double left_vel = 0, left_pul = 0, left_set = 0;
 PID left_pid(&left_vel, &left_pul, &left_set, LEFT_KP, LEFT_KI, LEFT_KD, DIRECT);
 double right_vel = 0, right_pul = 0, right_set = 0;
 PID right_pid(&right_vel, &right_pul, &right_set, RIGHT_KP, RIGHT_KI, RIGHT_KD, DIRECT);
+int prev_left_pul = 0;
+int prev_right_pul = 0;
 
 void gpio_callback(uint gpio, uint32_t events)
 {
@@ -42,42 +45,97 @@ void gpio_callback(uint gpio, uint32_t events)
 
 void pwm_out(int l_pul,int r_pul)
 {
-    if (l_pul > 0)
+    if(l_pul != prev_left_pul);
     {
-        pwm_set_chan_level(slice_num_1, channel_1, (uint16_t)l_pul);
-        gpio_put(OUT_DIR1, false);
-    }
-    else
-    {
-        pwm_set_chan_level(slice_num_1, channel_1, (uint16_t)abs(l_pul));
-        gpio_put(OUT_DIR1, true);
+        if (l_pul > 0)
+        {
+            pwm_set_chan_level(slice_num_1, channel_1, (uint16_t)l_pul);
+            gpio_put(OUT_DIR1, true);
+        }
+        else
+        {
+            pwm_set_chan_level(slice_num_1, channel_1, (uint16_t)abs(l_pul));
+            gpio_put(OUT_DIR1, false);
+        }
+        prev_left_pul = l_pul;
     }
 
-    if (r_pul > 0)
+    if(r_pul != prev_right_pul)
     {
-        pwm_set_chan_level(slice_num_2, channel_2, (uint16_t)r_pul);
-        gpio_put(OUT_DIR2, false);
-    }
-    else
-    {
-        pwm_set_chan_level(slice_num_2, channel_2, (uint16_t)abs(r_pul));
-        gpio_put(OUT_DIR2, true);
+        if (r_pul > 0)
+        {
+            pwm_set_chan_level(slice_num_2, channel_2, (uint16_t)r_pul);
+            gpio_put(OUT_DIR2, false);
+        }
+        else
+        {
+            pwm_set_chan_level(slice_num_2, channel_2, (uint16_t)abs(r_pul));
+            gpio_put(OUT_DIR2, true);
+        }
+        prev_right_pul = r_pul;
     }
 }
 
-static void slave_on_receive(int count) // TODO
+static void slave_on_request()
 {
+    // serialize data
+    uint8_t buff[11];
+    union {float real;uint32_t base;} u_data;
+    int chk = 0;
+    buff[0] = 0xFF;
+    buff[1] = 0xFE;
+    u_data.real = left_vel;
+    buff[2] = (u_data.base >> 0) & 0xFF;
+    buff[3] = (u_data.base >> 8) & 0xFF;
+    buff[4] = (u_data.base >> 16) & 0xFF;
+    buff[5] = (u_data.base >> 24) & 0xFF;
+    u_data.real = right_vel;
+    buff[6] = (u_data.base >> 0) & 0xFF;
+    buff[7] = (u_data.base >> 8) & 0xFF;
+    buff[8] = (u_data.base >> 16) & 0xFF;
+    buff[9] = (u_data.base >> 24) & 0xFF;
+    for(int i = 2; i < 10; i++) chk += buff[i];
+    buff[10] = 255 - (chk % 256);
+    Wire.write(buff, 11);
+}
+
+static void slave_on_receive(int count)
+{
+    // deserialize data
+    hard_assert(Wire.available());
+    uint8_t buff[11];
+    union {float real;uint32_t base;} u_data;
+    int chk = 0;
     while(Wire.available())
     {
-        uint8_t data = (uint8_t)Wire.read();
+        buff[0] = (uint8_t)Wire.read();
+        if(buff[0] != 0xFF) continue;
+        buff[1] = (uint8_t)Wire.read();
+        if(buff[1] != 0xFE) continue;
+        if(Wire.available() < 9) continue;
+        for(int i = 2; i < 11; i++)
+        {
+            buff[i] = (uint8_t)Wire.read();
+            chk += buff[i];
+        }
+        if((chk % 256) != 255)
+        {
+            chk = 0;
+            continue;
+        }
+        u_data.base = 0;
+        u_data.base |= ((uint32_t)buff[2] << 0);
+        u_data.base |= ((uint32_t)buff[3] << 8);
+        u_data.base |= ((uint32_t)buff[4] << 16);
+        u_data.base |= ((uint32_t)buff[5] << 24);
+        left_set = u_data.real;
+        u_data.base = 0;
+        u_data.base |= ((uint32_t)buff[6] << 0);
+        u_data.base |= ((uint32_t)buff[7] << 8);
+        u_data.base |= ((uint32_t)buff[8] << 16);
+        u_data.base |= ((uint32_t)buff[9] << 24);
+        right_set = u_data.real;
     }
-}
-
-static void slave_on_request() // TODO
-{
-    size_t size;
-    uint8_t value;
-    Wire.write(&value,size);
 }
 
 int main()
@@ -124,8 +182,8 @@ int main()
     gpio_pull_up(PICO_I2C_SDA);
     gpio_pull_up(PICO_I2C_SCL);
     i2c_init(PICO_I2C, PICO_I2C_BAUDRATE);
-    Wire.onReceive(slave_on_receive);
     Wire.onRequest(slave_on_request);
+    Wire.onReceive(slave_on_receive);
     Wire.begin(PICO_I2C_ADDR);
 
     left_pid.SetMode(AUTOMATIC);
@@ -138,19 +196,22 @@ int main()
     
     while(true)
     {
-        if((time_us_32() - prev_time) > PERIOD_IN_US)
+        uint32_t now_ = time_us_32();
+        if((now - prev_time) > (uint32_t)PERIOD_IN_US)
         {
-            left_vel = VEL_CONST * (left_tick_cnt - prev_left_tick_cnt);
-            right_vel = VEL_CONST * (right_tick_cnt - prev_left_tick_cnt);
-
+            int left_tick_diff = left_tick_cnt - prev_left_tick_cnt;
+            int right_tick_diff = right_tick_cnt - prev_right_tick_cnt;
+            left_vel = VEL_CONST * ((float)left_tick_diff);
+            right_vel = VEL_CONST * ((float)right_tick_diff);
             prev_left_tick_cnt = left_tick_cnt;
             prev_right_tick_cnt = right_tick_cnt;
-            prev_time = time_us_32();
+            prev_time = now;
+            //printf("%f\t%f\n", left_vel, left_set);
+            //printf("%f\t%f\n", right_vel, right_set);
         }
         left_pid.Compute();
         right_pid.Compute();
         pwm_out((int)left_pul,(int)right_pul);
-        sleep_ms(10);
     }
     return 0;
 }

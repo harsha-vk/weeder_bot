@@ -3,6 +3,7 @@
  */
  
 #include <pid.h>
+#include "pico/time.h"
 
 PID::PID(double* Input, double* Output, double* Setpoint, double Kp, double Ki, double Kd, int POn, int ControllerDirection)
 {
@@ -56,7 +57,7 @@ void PID::SetTunings(double Kp, double Ki, double Kd, int POn)
     pOn = POn;
     pOnE = POn == P_ON_E;
     dispKp = Kp; dispKi = Ki; dispKd = Kd;
-    double SampleTimeInSec = ((double)SampleTime) / 1'000'000;
+    double SampleTimeInSec = ((double)SampleTime) / 1000000;
     kp = Kp;
     ki = Ki * SampleTimeInSec;
     kd = Kd / SampleTimeInSec;
