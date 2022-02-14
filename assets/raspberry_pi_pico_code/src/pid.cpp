@@ -1,7 +1,3 @@
-/*
- * Originally: https://github.com/br3ttb/Arduino-PID-Library.git
- */
- 
 #include <pid.h>
 #include "pico/time.h"
 

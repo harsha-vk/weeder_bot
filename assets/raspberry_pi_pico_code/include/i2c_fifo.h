@@ -1,7 +1,3 @@
-/*
- * Originally: https://github.com/vmilea/pico_i2c_slave.git
- */
-
 #ifndef _I2C_FIFO_H_
 #define _I2C_FIFO_H_
 

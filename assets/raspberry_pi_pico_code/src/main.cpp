@@ -19,27 +19,26 @@ int right_tick_cnt = 0;
 int prev_right_tick_cnt = 0;
 
 uint32_t prev_time = 0;
-double left_vel = 0, left_pul = 0, left_set = 0;
-PID left_pid(&left_vel, &left_pul, &left_set, LEFT_KP, LEFT_KI, LEFT_KD, DIRECT);
-double right_vel = 0, right_pul = 0, right_set = 0;
-PID right_pid(&right_vel, &right_pul, &right_set, RIGHT_KP, RIGHT_KI, RIGHT_KD, DIRECT);
+double left_rpm = 0, left_pul = 0, left_set = 0;
+PID left_pid(&left_rpm, &left_pul, &left_set, LEFT_KP, LEFT_KI, LEFT_KD, DIRECT);
+double right_rpm = 0, right_pul = 0, right_set = 0;
+PID right_pid(&right_rpm, &right_pul, &right_set, RIGHT_KP, RIGHT_KI, RIGHT_KD, DIRECT);
 int prev_left_pul = 0;
 int prev_right_pul = 0;
 
+bool start_loop = false;
+
 void gpio_callback(uint gpio, uint32_t events)
 {
-    switch(gpio)
+    if(gpio == LEFT_ENC_A && events == GPIO_IRQ_EDGE_RISE)
     {
-        case LEFT_ENC_A:
-            if(gpio_get(LEFT_ENC_B)) left_tick_cnt++;
-            else left_tick_cnt--;
-            break;
-        case RIGHT_ENC_A:
-            if(gpio_get(RIGHT_ENC_B)) right_tick_cnt--;
-            else right_tick_cnt++;
-            break;
-        default:
-            break;
+        if(gpio_get(LEFT_ENC_B)) left_tick_cnt++;
+        else left_tick_cnt--;
+    }
+    else if(gpio == RIGHT_ENC_A && events == GPIO_IRQ_EDGE_RISE)
+    {
+        if(gpio_get(RIGHT_ENC_B)) right_tick_cnt--;
+        else right_tick_cnt++;
     }
 }
 
@@ -84,12 +83,12 @@ static void slave_on_request()
     int chk = 0;
     buff[0] = 0xFF;
     buff[1] = 0xFE;
-    u_data.real = left_vel;
+    u_data.real = left_rpm * VEL_CONST / RPM_CONST;
     buff[2] = (u_data.base >> 0) & 0xFF;
     buff[3] = (u_data.base >> 8) & 0xFF;
     buff[4] = (u_data.base >> 16) & 0xFF;
     buff[5] = (u_data.base >> 24) & 0xFF;
-    u_data.real = right_vel;
+    u_data.real = right_rpm * VEL_CONST / RPM_CONST;
     buff[6] = (u_data.base >> 0) & 0xFF;
     buff[7] = (u_data.base >> 8) & 0xFF;
     buff[8] = (u_data.base >> 16) & 0xFF;
@@ -128,19 +127,20 @@ static void slave_on_receive(int count)
         u_data.base |= ((uint32_t)buff[3] << 8);
         u_data.base |= ((uint32_t)buff[4] << 16);
         u_data.base |= ((uint32_t)buff[5] << 24);
-        left_set = u_data.real;
+        left_set = u_data.real * RPM_CONST / VEL_CONST;
         u_data.base = 0;
         u_data.base |= ((uint32_t)buff[6] << 0);
         u_data.base |= ((uint32_t)buff[7] << 8);
         u_data.base |= ((uint32_t)buff[8] << 16);
         u_data.base |= ((uint32_t)buff[9] << 24);
-        right_set = u_data.real;
+        right_set = u_data.real * RPM_CONST / VEL_CONST;
     }
+    start_loop = true;
 }
 
 int main()
 {
-    //stdio_init_all();
+    stdio_init_all();
     gpio_set_irq_enabled_with_callback(LEFT_ENC_A, GPIO_IRQ_EDGE_RISE, true, &gpio_callback);
     gpio_pull_down(LEFT_ENC_A);
 
@@ -196,18 +196,19 @@ int main()
     
     while(true)
     {
+        if(!start_loop) continue;
         uint32_t now_ = time_us_32();
-        if((now - prev_time) > (uint32_t)PERIOD_IN_US)
+        if((now_ - prev_time) > (uint32_t)PERIOD_IN_US)
         {
             int left_tick_diff = left_tick_cnt - prev_left_tick_cnt;
             int right_tick_diff = right_tick_cnt - prev_right_tick_cnt;
-            left_vel = VEL_CONST * ((float)left_tick_diff);
-            right_vel = VEL_CONST * ((float)right_tick_diff);
+            left_rpm = RPM_CONST * ((float)left_tick_diff);
+            right_rpm = RPM_CONST * ((float)right_tick_diff);
             prev_left_tick_cnt = left_tick_cnt;
             prev_right_tick_cnt = right_tick_cnt;
-            prev_time = now;
-            //printf("%f\t%f\n", left_vel, left_set);
-            //printf("%f\t%f\n", right_vel, right_set);
+            prev_time = now_;
+            printf("left %f\t%f\n", left_rpm, left_set);
+            printf("right %f\t%f\n", right_rpm, right_set);
         }
         left_pid.Compute();
         right_pid.Compute();

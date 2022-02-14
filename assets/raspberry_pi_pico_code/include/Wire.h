@@ -1,7 +1,3 @@
-/*
- * Originally: https://github.com/vmilea/pico_i2c_slave.git
- */
-
 #ifndef _WIRE_H_
 #define _WIRE_H_
 

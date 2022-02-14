@@ -1,7 +1,3 @@
-/*
- * Originally: https://github.com/vmilea/pico_i2c_slave.git
- */
-
 #include <Wire.h>
 #include <i2c_fifo.h>
 

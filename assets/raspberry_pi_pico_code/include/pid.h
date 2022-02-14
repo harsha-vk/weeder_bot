@@ -1,7 +1,3 @@
-/*
- * Originally: https://github.com/br3ttb/Arduino-PID-Library.git
- */
-
 #ifndef _PID_H_
 #define _PID_H_
 

@@ -1,7 +1,3 @@
-/*
- * Originally: https://github.com/vmilea/pico_i2c_slave.git
- */
-
 #include <i2c_slave.h>
 #include "hardware/irq.h"
 
