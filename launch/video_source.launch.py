@@ -10,7 +10,7 @@ def generate_launch_description():
     with open(config_path, 'r') as file:
         config_params = yaml.safe_load(file)['video_source']['ros__parameters']
     image_node = Node(package = 'ros_deep_learning',
-                      node_executable = 'video_source',
+                      executable = 'video_source',
                       parameters = [config_params])
     ld.add_action(image_node)
     return ld

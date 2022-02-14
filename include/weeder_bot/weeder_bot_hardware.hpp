@@ -1,5 +1,5 @@
-#ifndef WEEDER_BOT_HARDWARE__DIFFBOT_SYSTEM_HPP_
-#define WEEDER_BOT_HARDWARE__DIFFBOT_SYSTEM_HPP_
+#ifndef __WEEDER_BOT__WEEDER_BOT_HARDWARE_HPP__
+#define __WEEDER_BOT__WEEDER_BOT_HARDWARE_HPP__
 
 #include <hardware_interface/base_interface.hpp>
 #include <hardware_interface/system_interface.hpp>
@@ -7,12 +7,12 @@
 #include <vector>
 #include "weeder_bot/visibility_control.h"
 
-namespace weeder_bot_hardware
+namespace weeder_bot
 {
-    class DiffBotSystemHardware : public hardware_interface::BaseInterface<hardware_interface::SystemInterface>
+    class WeederBotHardware : public hardware_interface::BaseInterface<hardware_interface::SystemInterface>
     {
         public:
-            RCLCPP_SHARED_PTR_DEFINITIONS(DiffBotSystemHardware);
+            RCLCPP_SHARED_PTR_DEFINITIONS(WeederBotHardware);
 
             WEEDER_BOT_HARDWARE_PUBLIC
             hardware_interface::return_type configure(const hardware_interface::HardwareInfo & info) override;
@@ -48,6 +48,6 @@ namespace weeder_bot_hardware
             // Store the wheeled robot position
             double base_x_, base_y_, base_theta_;
     };
-}  // namespace weeder_bot_hardware
+}  // namespace weeder_bot
 
-#endif  // WEEDER_BOT_HARDWARE__DIFFBOT_SYSTEM_HPP_
+#endif  // __WEEDER_BOT__WEEDER_BOT_HARDWARE_HPP__

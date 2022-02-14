@@ -14,7 +14,7 @@ def generate_launch_description():
                         PythonLaunchDescriptionSource(
                             os.path.join(get_package_share_directory('weed_locator'),'launch','image_rect.launch.py')))
     detectnet_node = Node(package = 'ros_deep_learning',
-                          node_executable = 'detectnet',
+                          executable = 'detectnet',
                           parameters = [config_params],
                           remappings = [('/detectnet/image_in','/pi_cam/image_rect')])
     ld.add_action(image_rect)

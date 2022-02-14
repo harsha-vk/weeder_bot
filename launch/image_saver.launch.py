@@ -12,7 +12,7 @@ def generate_launch_description():
                         PythonLaunchDescriptionSource(
                             os.path.join(get_package_share_directory('weed_locator'),'launch','image_rect.launch.py')))
     saver_node = Node(package = 'image_view',
-                      node_executable = 'extract_images',
+                      executable = 'extract_images',
                       parameters = [config_path],
                       remappings = [('/image','/pi_cam/image_rect')])
     ld.add_action(image_rect)
